@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-YOUR HEADER COMMENT HERE
+Week on of Gene_finder project. Exploeres some of the functions and doctesting.
+Also looks at the start of the gene biology needed.
 
-@author: YOUR NAME HERE
+@author: Gretchen Rice
 
 """
 
@@ -30,8 +31,16 @@ def get_complement(nucleotide):
     >>> get_complement('C')
     'G'
     """
-    # TODO: implement this
-    pass
+    if nucleotide == 'A':
+        return 'T'
+    elif nucleotide == 'T':
+        return 'A'
+    elif nucleotide == 'C':
+        return 'G'
+    elif nucleotide == 'G':
+        return 'C'
+    else:
+        return 'This is not possible'
 
 
 def get_reverse_complement(dna):
@@ -44,9 +53,39 @@ def get_reverse_complement(dna):
     'AAAGCGGGCAT'
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
+
+    This one should be fine because it check strings of different lengths and
+    checks different strings
     """
-    # TODO: implement this
-    pass
+    revDna = list(dna)  # creates a list of all the terms in dna
+    revDna.reverse()  # reverses the order of the list
+    revComp = revDna  # makes sure new list is the right length
+    for i in range(0, len(dna)):
+        revComp[i] = get_complement(revDna[i])  # assigns values to new list
+
+    return "".join(revComp)
+
+
+def find_start(dna):
+    """
+        Takes a strand of DNA and looks for 'ATG' at the start of the string
+
+        dna: string of DNA
+        return: index of the start codon or -1 if none
+
+        >>> find_start('ATGGGGGGGG')
+        0
+        >>> find_start('GGGGGGATGGGGGGGG')
+        6
+        >>> find_start('GGGAAAT')
+        -1
+    """
+    for i in range(0, len(dna), 3):  # checks at every 3 for ATG
+        c = dna[i:i+3]
+        if c == 'ATG':
+            return i  # if find "ATG" return the index
+
+    return -1  # if no ATG return -1
 
 
 def rest_of_ORF(dna):
@@ -61,9 +100,56 @@ def rest_of_ORF(dna):
     'ATG'
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
+
+    This one should also work because it checks different length strings and
+    tests ones with string not divisible by 3
     """
-    # TODO: implement this
-    pass
+    i = 3  # know it starts with ATG so just kskip to index after that
+
+    while i < len(dna):
+        if dna[i] == 'T':  # check for first of end codon
+            # check for rest of end codon and return dna strand
+            if (dna[i+1] == 'A') and (dna[i+2] == 'G' or dna[i+2] == 'A'):
+                return dna[:i]
+            elif dna[i+1] == 'G' and dna[i+2] == 'A':
+                return dna[:i]
+
+        i += 3
+    return dna  # return dna if no end codon
+
+
+"""
+My first try at find_all_Orfs which worked alone
+Did not work with later code because my index was out of range
+Lead me to make a new function to find start codon seperately
+
+def find_all_ORFs_oneframe_try(dna):
+     Finds all non-nested open reading frames in the given DNA
+        sequence and returns them as a list.  This function should
+        only find ORFs that are in the default frame of the sequence
+        (i.e. they start on indices that are multiples of 3).
+        By non-nested we mean that if an ORF occurs entirely within
+        another ORF, it should not be included in the returned list of ORFs.
+
+        dna: a DNA sequence
+        returns: a list of non-nested ORFs
+    >>> find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
+    ['ATGCATGAATGTAGA', 'ATGTGCCC']
+
+    orfs = []
+
+    i = 0
+
+    while i < len(dna):
+        if (dna[i] == 'A') and (dna[i+1] == 'T') and (dna[i+2]):
+            strand = rest_of_ORF(dna[i:])
+            orfs.append(strand)
+            i = i + len(strand)
+        else:
+            i += 3
+
+    return orfs
+"""
 
 
 def find_all_ORFs_oneframe(dna):
@@ -78,9 +164,24 @@ def find_all_ORFs_oneframe(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
+
+    This one should also work to show enough because it has many ATGs, not all
+    starting on something divisible by 3
     """
-    # TODO: implement this
-    pass
+    orfs = []
+
+    while True:
+        startIndex = find_start(dna)  # finds ATG, start codon
+        if startIndex == -1:
+            break  # if no start codon, end
+        else:
+            newDna = dna[startIndex:]  # if start codon, create dna at index
+            strand = rest_of_ORF(newDna)  # find the dna strand
+            orfs.append(strand)  # add strand to new list
+            newStart = len(strand)  # find new place to look for start codons
+            dna = dna[newStart:]  # modify dna starting at new start pos
+
+    return orfs
 
 
 def find_all_ORFs(dna):
@@ -95,9 +196,21 @@ def find_all_ORFs(dna):
 
     >>> find_all_ORFs("ATGCATGAATGTAG")
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
+    >>> find_all_ORFs("ATGCGAATGTAGCATCAAA")
+    ['ATGCGAATG']
+
+    Added second so tried one with length not divisble by 3
     """
-    # TODO: implement this
-    pass
+    allOrfs = []
+    allOrfs = allOrfs + find_all_ORFs_oneframe(dna)
+    allOrfs = allOrfs + find_all_ORFs_oneframe(dna[1:])
+    allOrfs = allOrfs + find_all_ORFs_oneframe(dna[2:])
+
+    allOrfsNoDupes = []
+    for orf in allOrfs:
+        if orf not in allOrfsNoDupes:
+            allOrfsNoDupes.append(orf)
+    return allOrfsNoDupes
 
 
 def find_all_ORFs_both_strands(dna):
@@ -108,9 +221,10 @@ def find_all_ORFs_both_strands(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_both_strands("ATGCGAATGTAGCATCAAA")
     ['ATGCGAATG', 'ATGCTACATTCGCAT']
+
+    This seems good, has ATGs at different places and is length divisble by 3
     """
-    # TODO: implement this
-    pass
+    return find_all_ORFs(dna) + find_all_ORFs(get_reverse_complement(dna))
 
 
 def longest_ORF(dna):
@@ -160,6 +274,7 @@ def gene_finder(dna):
     """
     # TODO: implement this
     pass
+
 
 if __name__ == "__main__":
     import doctest
