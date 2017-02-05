@@ -12,6 +12,7 @@ from amino_acids import aa, codons, aa_table   # you may find these useful
 from load import load_seq
 
 
+
 def shuffle_string(s):
     """Shuffles the characters in the input string
         NOTE: this is a helper function, you do not
@@ -88,6 +89,16 @@ def find_start(dna):
     return -1  # if no ATG return -1
 
 
+def splitCodon(orf):
+    """
+        Takes orf and splits it into codons. Returns list of codon strings
+    """
+    codon = []
+    for i in range(0, len(orf)-len(orf) % 3, 3):
+        codon.append(orf[i: i+3])
+    return codon
+
+
 def rest_of_ORF(dna):
     """ Takes a DNA sequence that is assumed to begin with a start
         codon and returns the sequence up to but not including the
@@ -106,7 +117,7 @@ def rest_of_ORF(dna):
     """
     i = 3  # know it starts with ATG so just kskip to index after that
 
-    while i < len(dna):
+    while i < len(dna)-2:
         if dna[i] == 'T':  # check for first of end codon
             # check for rest of end codon and return dna strand
             if (dna[i+1] == 'A') and (dna[i+2] == 'G' or dna[i+2] == 'A'):
@@ -233,8 +244,13 @@ def longest_ORF(dna):
     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
     'ATGCTACATTCGCAT'
     """
-    # TODO: implement this
-    pass
+    longest = ''
+    allOrfs = find_all_ORFs_both_strands(dna)
+    for orfs in allOrfs:
+        if len(orfs) > len(longest):
+            longest = orfs
+
+    return longest
 
 
 def longest_ORF_noncoding(dna, num_trials):
@@ -244,8 +260,19 @@ def longest_ORF_noncoding(dna, num_trials):
         dna: a DNA sequence
         num_trials: the number of random shuffles
         returns: the maximum length longest ORF """
-    # TODO: implement this
-    pass
+    longest = ''
+    # print(longest)
+    for r in range(num_trials):
+        dna = shuffle_string(dna)
+        res = longest_ORF(dna)
+        # print(res)
+        if len(res) > len(longest):
+            longest = res
+
+    return len(longest)
+
+
+# print(longest_ORF_noncoding("ATGCGAATGTAGCATCAAA", 4))
 
 
 def coding_strand_to_AA(dna):
@@ -257,13 +284,36 @@ def coding_strand_to_AA(dna):
         returns: a string containing the sequence of amino acids encoded by the
                  the input DNA fragment
 
+        # Officially wants a string as return. I disagree. If more than one ORF
+        # are found in the dna then you should have more than one amino accid
+        # sequences
+
         >>> coding_strand_to_AA("ATGCGA")
         'MR'
         >>> coding_strand_to_AA("ATGCCCGCTTT")
         'MPA'
+
     """
-    # TODO: implement this
-    pass
+    """
+    amino = []
+    # orfs = find_all_ORFs_both_strands(dna)
+    for orf in orfs:
+        c = splitCodon(orf)
+        a = ''
+        for codon in c:
+            a += aa_table[codon]
+
+        amino.append(a)
+
+    return amino
+    """
+
+    c = splitCodon(dna)
+    a = ''
+    for codon in c:
+        a += aa_table[codon]
+
+    return a
 
 
 def gene_finder(dna):
@@ -272,10 +322,21 @@ def gene_finder(dna):
         dna: a DNA sequence
         returns: a list of all amino acid sequences coded by the sequence dna.
     """
-    # TODO: implement this
-    pass
+    threshold = longest_ORF_noncoding(dna, 1500)
+    orfs = find_all_ORFs_both_strands(dna)
+    amino = []
+    for orf in orfs:
+        if len(orf) > threshold:
+            amino.append(coding_strand_to_AA(orf))
+
+    return amino
 
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
+    dna = load_seq("./data/X73525.fa")
+    gene = gene_finder(dna)
+    for g in gene:
+        print(g)
+        print('-'*80)
